@@ -6,7 +6,15 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { VideoCall } from "@/components/video-call"
 import { Video, Users } from "lucide-react"
-import { toast } from "@/components/ui/use-toast"
+import { toast as useToast} from "@/components/ui/use-toast"
+import {
+  WhatsappShareButton,
+  FacebookShareButton,
+  EmailShareButton,
+  WhatsappIcon,
+  FacebookIcon,
+  EmailIcon,
+} from 'react-share'
 
 export default function VideoChatApp() {
   const [roomId, setRoomId] = useState("")
@@ -15,6 +23,7 @@ export default function VideoChatApp() {
   const [isVideoEnabled, setIsVideoEnabled] = useState(true)
   const [isAudioEnabled, setIsAudioEnabled] = useState(true)
   const [participants, setParticipants] = useState<string[]>([])
+  const [showShareOptions, setShowShareOptions] = useState(false)
 useEffect(() => {
   const handleStorage = (event: StorageEvent) => {
     if (event.key === "video-chat-room" && event.newValue) {
@@ -41,6 +50,10 @@ useEffect(() => {
        localStorage.setItem("video-chat-room", JSON.stringify({ roomId, userName }));
     }
   }
+
+  const shareMessage = `Join my video chat room with ID: ${roomId}`
+  const currentUrl = typeof window !== "undefined" ? window.location.href : "about:blank";
+
 
   const leaveRoom = () => {
     setIsInRoom(false)
@@ -114,28 +127,48 @@ useEffect(() => {
             Join Room
           </Button>
 
-          <div className="pt-4 border-t border-white/20">
-            <Button
-              variant="outline"
-              className="w-full text-sm border-white/20 text-white hover:bg-white/10"
-              onClick={() => {
-                if (roomId.trim()) {
-                  navigator.clipboard.writeText(roomId)
-                  toast({
-                    title: "Copied to clipboard!",
-                    description: `Room ID "${roomId}" is ready to share.`,
-                  })
-                } else {
-                  toast({
-                    title: "Missing Room ID",
-                    description: "Please enter or generate a Room ID first.",
-                  })
-                }
-              }}
-            >
-              Share the Room ID with others to invite them
-            </Button>
-          </div>
+          <div className="relative group">
+  <Button
+    variant="outline"
+    className="w-full text-sm border-white/20 text-white hover:bg-white/10"
+    onClick={() => {
+      if (roomId.trim()) {
+        navigator.clipboard.writeText(roomId)
+        useToast({
+          title: "Copied to clipboard!",
+          description: `Room ID "${roomId}" is ready to share.`,
+        })
+        setShowShareOptions(prev => !prev) 
+      } else {
+        useToast({
+          title: "Missing Room ID",
+          description: "Please enter or generate a Room ID first.",
+        })
+      }
+    }}
+  >
+    Share the Room ID with others to invite them
+  </Button>
+
+  {showShareOptions && roomId && (
+    <div
+      className="absolute top-full left-0 z-10 mt-2 flex gap-2 p-2 bg-white/10 rounded-xl backdrop-blur-sm"
+    >
+      <WhatsappShareButton title={shareMessage} url={currentUrl}>
+       <WhatsappIcon size={32} round />
+      </WhatsappShareButton>
+
+      <FacebookShareButton title={shareMessage} url={currentUrl}>
+        <FacebookIcon size={32} round />
+      </FacebookShareButton>
+
+      <EmailShareButton subject="Join my video chat room" body={shareMessage} url={currentUrl}>
+        <EmailIcon size={32} round />
+      </EmailShareButton>
+    </div>
+  )}
+</div>
+
         </CardContent>
       </Card>
     </div>
