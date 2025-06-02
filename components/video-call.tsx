@@ -115,20 +115,7 @@ export function VideoCall({
     }
   }, [])
 
-  // Simulate adding participants
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (participants.length === 1) {
-        const simulatedParticipants = ["Alice Johnson", "Bob Smith", "Carol Davis"]
-        const randomParticipant = simulatedParticipants[Math.floor(Math.random() * simulatedParticipants.length)]
-        if (!participants.includes(randomParticipant)) {
-          setParticipants([...participants, randomParticipant])
-        }
-      }
-    }, 3000)
-
-    return () => clearTimeout(timer)
-  }, [participants, setParticipants])
+  
 
   const toggleVideo = useCallback(() => {
     if (localStream) {
