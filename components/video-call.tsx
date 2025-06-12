@@ -115,7 +115,6 @@ export function VideoCall({
     }
   }, [])
 
-  
 
   const toggleVideo = useCallback(() => {
     if (localStream) {
