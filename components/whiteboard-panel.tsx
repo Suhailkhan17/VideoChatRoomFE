@@ -154,13 +154,124 @@ export function WhiteboardPanel({ onClose }: WhiteboardPanelProps) {
       }
     }
 
+    // Add document-level touch event listeners
+    const handleDocumentTouchMove = (e: TouchEvent) => {
+      const { x, y } = getDocumentTouchPos(e)
+      
+      // In locked mode, if touch goes outside canvas, stop drawing and ignore movement
+      if (!allowOutsideCanvas && !isWithinCanvas(x, y)) {
+        // Stop any ongoing drawing
+        if (isDrawing) {
+          const ctx = canvasRef.current?.getContext("2d")
+          if (ctx) {
+            ctx.closePath()
+            ctx.globalCompositeOperation = "source-over"
+            saveToHistory()
+          }
+          setIsDrawing(false)
+        }
+        
+        // Stop shape drawing
+        if (startPos) {
+          setStartPos(null)
+        }
+        
+        // Don't update position or continue any operations
+        return
+      }
+      
+      setMousePos({ x, y })
+
+      if (!isDrawing && !startPos) return
+
+      const ctx = canvasRef.current?.getContext("2d")
+      if (!ctx) return
+
+      if (isDrawing) {
+        if (tool === "pen") {
+          ctx.globalCompositeOperation = "source-over"
+          ctx.strokeStyle = color
+          ctx.lineWidth = lineWidth
+          ctx.lineTo(x, y)
+          ctx.stroke()
+        } else if (tool === "eraser") {
+          ctx.globalCompositeOperation = "destination-out"
+          ctx.lineWidth = lineWidth * 2
+          ctx.lineTo(x, y)
+          ctx.stroke()
+        }
+      }
+    }
+
+    const handleDocumentTouchEnd = (e: TouchEvent) => {
+      const { x, y } = getDocumentTouchPos(e)
+      
+      // In locked mode, ignore touch end events outside canvas
+      if (!allowOutsideCanvas && !isWithinCanvas(x, y)) {
+        return
+      }
+      
+      const wasDrawing = isDrawing
+      const hadStartPos = startPos !== null
+      
+      setIsDrawing(false)
+
+      const canvas = canvasRef.current
+      if (!canvas) return
+
+      const ctx = canvas.getContext("2d")
+      if (!ctx) return
+
+      if (tool === "pen" || tool === "eraser") {
+        if (wasDrawing) {
+          ctx.closePath()
+          // Reset composite operation to normal
+          ctx.globalCompositeOperation = "source-over"
+          // Save to history after pen/eraser stroke is complete
+          saveToHistory()
+        }
+      }
+
+      if ((tool === "rectangle" || tool === "circle") && hadStartPos) {
+        const x2 = x
+        const y2 = y
+
+        ctx.strokeStyle = color
+        ctx.lineWidth = lineWidth
+        ctx.globalCompositeOperation = "source-over"
+
+        if (tool === "rectangle") {
+          const width = x2 - startPos!.x
+          const height = y2 - startPos!.y
+          ctx.strokeRect(startPos!.x, startPos!.y, width, height)
+        }
+
+        if (tool === "circle") {
+          const radius = Math.sqrt(Math.pow(x2 - startPos!.x, 2) + Math.pow(y2 - startPos!.y, 2)) / 2
+          const centerX = (startPos!.x + x2) / 2
+          const centerY = (startPos!.y + y2) / 2
+          ctx.beginPath()
+          ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI)
+          ctx.stroke()
+        }
+
+        setStartPos(null)
+        // Save to history after shape is complete
+        saveToHistory()
+      }
+    }
+
     // Always add document listeners
     document.addEventListener('mousemove', handleDocumentMouseMove)
     document.addEventListener('mouseup', handleDocumentMouseUp)
+    document.addEventListener('touchmove', handleDocumentTouchMove, { passive: false })
+    document.addEventListener('touchend', handleDocumentTouchEnd, { passive: false })
 
     return () => {
       document.removeEventListener('mousemove', handleDocumentMouseMove)
       document.removeEventListener('mouseup', handleDocumentMouseUp)
+      document.removeEventListener('touchmove', handleDocumentTouchMove)
+      document.removeEventListener('touchend', handleDocumentTouchEnd)
     }
   }, [isDrawing, tool, color, lineWidth, startPos, allowOutsideCanvas])
 
@@ -265,6 +376,19 @@ export function WhiteboardPanel({ onClose }: WhiteboardPanelProps) {
     }
   }
 
+  // Get touch position for canvas touch events
+  const getTouchPos = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current
+    if (!canvas) return { x: 0, y: 0 }
+
+    const rect = canvas.getBoundingClientRect()
+    const touch = e.touches[0] || e.changedTouches[0]
+    return {
+      x: touch.clientX - rect.left,
+      y: touch.clientY - rect.top,
+    }
+  }
+
   // Get mouse position for document-level events (when mouse leaves canvas)
   const getDocumentMousePos = (e: MouseEvent) => {
     const canvas = canvasRef.current
@@ -274,6 +398,19 @@ export function WhiteboardPanel({ onClose }: WhiteboardPanelProps) {
     return {
       x: e.clientX - rect.left,
       y: e.clientY - rect.top,
+    }
+  }
+
+  // Get touch position for document-level touch events
+  const getDocumentTouchPos = (e: TouchEvent) => {
+    const canvas = canvasRef.current
+    if (!canvas) return { x: 0, y: 0 }
+
+    const rect = canvas.getBoundingClientRect()
+    const touch = e.touches[0] || e.changedTouches[0]
+    return {
+      x: touch.clientX - rect.left,
+      y: touch.clientY - rect.top,
     }
   }
 
@@ -339,6 +476,98 @@ export function WhiteboardPanel({ onClose }: WhiteboardPanelProps) {
 
     if ((tool === "rectangle" || tool === "circle") && hadStartPos) {
       const { x: x2, y: y2 } = getMousePos(e)
+
+      ctx.strokeStyle = color
+      ctx.lineWidth = lineWidth
+      ctx.globalCompositeOperation = "source-over"
+
+      if (tool === "rectangle") {
+        const width = x2 - startPos!.x
+        const height = y2 - startPos!.y
+        ctx.strokeRect(startPos!.x, startPos!.y, width, height)
+      }
+
+      if (tool === "circle") {
+        const radius = Math.sqrt(Math.pow(x2 - startPos!.x, 2) + Math.pow(y2 - startPos!.y, 2)) / 2
+        const centerX = (startPos!.x + x2) / 2
+        const centerY = (startPos!.y + y2) / 2
+        ctx.beginPath()
+        ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI)
+        ctx.stroke()
+      }
+
+      setStartPos(null)
+      // Save to history after shape is complete
+      saveToHistory()
+    }
+  }
+
+  // Touch event handlers
+  const handleTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    e.preventDefault() // Prevent scrolling/zooming
+    const { x, y } = getTouchPos(e)
+
+    const ctx = canvasRef.current?.getContext("2d")
+    if (!ctx) return
+
+    if (tool === "pen" || tool === "eraser") {
+      setIsDrawing(true)
+      ctx.beginPath()
+      ctx.moveTo(x, y)
+    } else if (tool === "rectangle" || tool === "circle") {
+      setStartPos({ x, y })
+    }
+  }
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    e.preventDefault() // Prevent scrolling/zooming
+    const { x, y } = getTouchPos(e)
+    setMousePos({ x, y })
+
+    if (!isDrawing) return
+
+    const ctx = canvasRef.current?.getContext("2d")
+    if (!ctx) return
+
+    if (tool === "pen") {
+      ctx.globalCompositeOperation = "source-over"
+      ctx.strokeStyle = color
+      ctx.lineWidth = lineWidth
+      ctx.lineTo(x, y)
+      ctx.stroke()
+    } else if (tool === "eraser") {
+      ctx.globalCompositeOperation = "destination-out"
+      ctx.lineWidth = lineWidth * 2
+      ctx.lineTo(x, y)
+      ctx.stroke()
+    }
+  }
+
+  const handleTouchEnd = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    e.preventDefault()
+    const wasDrawing = isDrawing
+    const hadStartPos = startPos !== null
+    
+    setIsDrawing(false)
+
+    const canvas = canvasRef.current
+    if (!canvas) return
+
+    const ctx = canvas.getContext("2d")
+    if (!ctx) return
+
+    if (tool === "pen" || tool === "eraser") {
+      if (wasDrawing) {
+        ctx.closePath()
+        // Reset composite operation to normal
+        ctx.globalCompositeOperation = "source-over"
+        // Save to history after pen/eraser stroke is complete
+        saveToHistory()
+      }
+    }
+
+    if ((tool === "rectangle" || tool === "circle") && hadStartPos) {
+      const { x: x2, y: y2 } = getTouchPos(e)
 
       ctx.strokeStyle = color
       ctx.lineWidth = lineWidth
@@ -534,8 +763,11 @@ export function WhiteboardPanel({ onClose }: WhiteboardPanelProps) {
             onMouseMove={draw}
             onMouseUp={stopDrawing}
             onMouseLeave={() => {}} // Remove auto-stop on mouse leave
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
             className="absolute top-0 left-0 border border-gray-600 cursor-crosshair z-10"
-            style={{ backgroundColor: "#1f2937", width: "800px", height: "600px" }}
+            style={{ backgroundColor: "#1f2937", width: "800px", height: "600px", touchAction: "none" }}
           />
           <canvas
             ref={overlayRef}
