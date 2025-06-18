@@ -1,3 +1,4 @@
+
 "use client"
 
 import type React from "react"
@@ -85,10 +86,10 @@ export function ChatPanel({ roomId, userName, onClose }: ChatPanelProps) {
   }
 
   return (
-    <Card className="w-80 bg-gray-800 border-gray-700 text-white h-full rounded-none flex flex-col">
+    <Card className="w-80 bg-[#121949] border-gray-700 text-white h-full rounded-none flex flex-col">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 flex-shrink-0">
         <CardTitle className="text-lg">Chat</CardTitle>
-        <Button onClick={onClose} variant="ghost" size="sm" className="text-gray-400 hover:text-white">
+        <Button onClick={onClose} variant="ghost" size="sm" className="text-gray-400 hover:text-black">
           <X className="h-4 w-4" />
         </Button>
       </CardHeader>
@@ -103,8 +104,8 @@ export function ChatPanel({ roomId, userName, onClose }: ChatPanelProps) {
                   message.isOwn
                     ? "bg-blue-600 text-white"
                     : message.userName === "System"
-                      ? "bg-gray-600 text-gray-200"
-                      : "bg-gray-700 text-white"
+                      ? "bg-[#2563eb] text-gray-200"
+                      : "bg-[#2563eb] text-white"
                 }`}
               >
                 {!message.isOwn && message.userName !== "System" && (
@@ -136,13 +137,13 @@ export function ChatPanel({ roomId, userName, onClose }: ChatPanelProps) {
               onChange={(e) => setNewMessage(e.target.value)}
               onKeyPress={handleKeyPress}
               placeholder="Type a message..."
-              className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-400"
+              className="bg-[#121949] border-gray-600 text-white placeholder:text-gray-400"
             />
             <Button
               onClick={sendMessage}
               disabled={!newMessage.trim()}
               size="sm"
-              className="bg-blue-600 hover:bg-blue-700"
+              className="bg-[#21abf3] hover:bg-blue-700"
             >
               <Send className="h-4 w-4" />
             </Button>

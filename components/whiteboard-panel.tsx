@@ -1,5 +1,6 @@
 "use client"
 
+
 import type React from "react"
 import { useRef, useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -756,27 +757,31 @@ export function WhiteboardPanel({ onClose }: WhiteboardPanelProps) {
           </Button>
         </div>
 
-        <div className="relative flex-1 flex items-center justify-center bg-gray-900 rounded-lg p-4">
-          <canvas
-            ref={canvasRef}
-            onMouseDown={startDrawing}
-            onMouseMove={draw}
-            onMouseUp={stopDrawing}
-            onMouseLeave={() => {}} // Remove auto-stop on mouse leave
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
-            className="absolute top-0 left-0 border border-gray-600 cursor-crosshair z-10"
-            style={{ backgroundColor: "#1f2937", width: "800px", height: "600px", touchAction: "none" }}
-          />
-          <canvas
-            ref={overlayRef}
-            className="pointer-events-none absolute top-0 left-0 z-20"
-            width={800}
-            height={600}
-          />
+        <div className="relative flex-1 flex items-center justify-center rounded-lg p-4 overflow-hidden">
+          <div className="relative">
+            <canvas
+              ref={canvasRef}
+              onMouseDown={startDrawing}
+              onMouseMove={draw}
+              onMouseUp={stopDrawing}
+              onMouseLeave={() => {}} // Remove auto-stop on mouse leave
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+              className="top-0 left-0 border border-gray-500 cursor-crosshair z-10"
+              style={{ backgroundColor: "#0f172a", width: "800px", height: "600px", touchAction: "none" }}
+            />
+            <canvas
+              ref={overlayRef}
+              className="pointer-events-none absolute top-0 left-0"
+              width={800}
+              height={600}
+            />
+          </div>
         </div>
       </CardContent>
     </Card>
   )
 }
+
+

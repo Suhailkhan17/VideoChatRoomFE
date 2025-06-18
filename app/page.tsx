@@ -79,7 +79,7 @@ useEffect(() => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br bg-[#141b4d] flex items-center justify-center p-4">
       <Card className="w-full max-w-md bg-white/10 backdrop-blur-lg border-white/20 text-white">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold flex items-center justify-center gap-2">
@@ -111,7 +111,7 @@ useEffect(() => {
               <Button
                 onClick={generateRoomId}
                 variant="outline"
-                className="border-white/20 text-white hover:bg-white/10"
+                className="border-white/20 bg-[#111745] hover:bg-blue-900 text-white hover:text-white"
               >
                 Generate
               </Button>
@@ -121,7 +121,7 @@ useEffect(() => {
           <Button
             onClick={joinRoom}
             disabled={!roomId.trim() || !userName.trim()}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+            className="w-full bg-[#111745] hover:bg-blue-900 text-white"
           >
             <Video className="h-4 w-4 mr-2" />
             Join Room
@@ -130,7 +130,7 @@ useEffect(() => {
           <div className="relative group">
   <Button
     variant="outline"
-    className="w-full text-sm border-white/20 text-white hover:bg-white/10"
+    className="w-full text-sm border-white/20 text-black hover:bg-white/10"
     onClick={() => {
       if (roomId.trim()) {
         navigator.clipboard.writeText(roomId)

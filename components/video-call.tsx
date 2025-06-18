@@ -89,20 +89,42 @@ export function VideoCall({
   const mediaRecorder = useRef<MediaRecorder | null>(null)
   const recordedChunks = useRef<Blob[]>([])
 
-  // Initialize local media stream
   useEffect(() => {
     const initializeMedia = async () => {
       try {
+        // Always request both camera and microphone permissions upfront
+        // This will trigger the native browser permission dialog
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: isVideoEnabled,
-          audio: isAudioEnabled,
+          video: true,  // Always request camera permission
+          audio: true,  // Always request microphone permission
         })
+        
+        // Now apply the actual user preferences
+        const videoTrack = stream.getVideoTracks()[0]
+        const audioTrack = stream.getAudioTracks()[0]
+        
+        if (videoTrack) {
+          videoTrack.enabled = isVideoEnabled
+        }
+        
+        if (audioTrack) {
+          audioTrack.enabled = isAudioEnabled
+        }
+        
         setLocalStream(stream)
         if (localVideoRef.current) {
           localVideoRef.current.srcObject = stream
         }
       } catch (error) {
         console.error("Error accessing media devices:", error)
+        // Handle permission denied or device not available
+        if (error instanceof Error) {
+          if (error.name === 'NotAllowedError') {
+            console.log("User denied media permissions")
+          } else if (error.name === 'NotFoundError') {
+            console.log("No media devices found")
+          }
+        }
       }
     }
 
@@ -116,15 +138,56 @@ export function VideoCall({
   }, [])
 
 
-  const toggleVideo = useCallback(() => {
+  const toggleVideo = useCallback(async () => {
+  if (isVideoEnabled) {
+    // Turn OFF video - completely destroy the stream
     if (localStream) {
-      const videoTrack = localStream.getVideoTracks()[0]
-      if (videoTrack) {
-        videoTrack.enabled = !isVideoEnabled
-        onVideoToggle(!isVideoEnabled)
+      // Clear video element first
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = null
+      }
+      
+      // Stop all tracks aggressively
+      localStream.getTracks().forEach(track => {
+        track.stop()
+      })
+      
+      // Clear the stream reference
+      setLocalStream(null)
+      
+      // Longer delay to ensure hardware release
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
+      // Don't create a new stream - just leave it null when video is off
+      // This ensures no video hardware is being used at all
+    }
+    onVideoToggle(false)
+  } else {
+    // Turn ON video - create completely fresh stream
+    try {
+      // Create new stream with both audio and video
+      const newStream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: true,
+      })
+      
+      setLocalStream(newStream)
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = newStream
+      }
+      onVideoToggle(true)
+    } catch (error) {
+      console.error("Error creating video stream:", error)
+      if (error instanceof Error) {
+        if (error.name === 'NotAllowedError') {
+          console.log("Camera permission denied")
+        } else if (error.name === 'NotFoundError') {
+          console.log("No camera found")
+        }
       }
     }
-  }, [localStream, isVideoEnabled, onVideoToggle])
+  }
+}, [localStream, isVideoEnabled, onVideoToggle])
 
   const toggleAudio = useCallback(() => {
     if (localStream) {
@@ -140,8 +203,8 @@ export function VideoCall({
     try {
       const displayMediaOptions: DisplayMediaStreamOptions = {
         video: {
-          mediaSource:
-            type === "screen" ? ("screen" as any) : type === "window" ? ("window" as any) : ("browser" as any),
+          mediaSource :
+          type === "screen" ? ("screen" as any) : type === "window" ? ("window" as any) : ("browser" as any),
           frameRate: options?.frameRate || 30,
           width: { ideal: options?.quality === "ultra" ? 3840 : options?.quality === "high" ? 1920 : 1280 },
           height: { ideal: options?.quality === "ultra" ? 2160 : options?.quality === "high" ? 1080 : 720 },
@@ -303,14 +366,14 @@ export function VideoCall({
       />
 
       {/* Header */}
-      <div className="flex items-center justify-between p-4 bg-gray-800 border-b border-gray-700">
+      <div className="flex items-center justify-between p-4 bg-[#354db0] border-b border-gray-700">
         <div className="flex items-center gap-4">
           <h1 className="text-xl font-semibold text-white">Room: {roomId}</h1>
           <Button
             onClick={copyRoomId}
             variant="outline"
             size="sm"
-            className="border-gray-600 text-gray-300 hover:bg-gray-700"
+            className="border-gray-600 text-gray-800 hover:bg-gray-700"
           >
             {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
             {copied ? "Copied!" : "Copy ID"}
@@ -332,7 +395,7 @@ export function VideoCall({
         </div>
 
         <div className="flex items-center gap-2">
-          <Badge variant="secondary" className="bg-green-600 text-white">
+          <Badge variant="secondary" className="bg-green-600 text-white hover:text-black">
             <Users className="h-3 w-3 mr-1" />
             {participants.length} participant{participants.length !== 1 ? "s" : ""}
           </Badge>
@@ -341,7 +404,7 @@ export function VideoCall({
             onClick={() => setShowParticipants(!showParticipants)}
             variant="outline"
             size="sm"
-            className="border-gray-600 text-gray-300 hover:bg-gray-700"
+            className="border-gray-600 text-gray-800 hover:bg-gray-700"
           >
             <Users className="h-4 w-4" />
           </Button>
@@ -350,7 +413,7 @@ export function VideoCall({
             onClick={() => setShowChat(!showChat)}
             variant="outline"
             size="sm"
-            className="border-gray-600 text-gray-300 hover:bg-gray-700"
+            className="border-gray-600 text-gray-800 hover:bg-gray-700"
           >
             <MessageSquare className="h-4 w-4" />
           </Button>
@@ -359,18 +422,18 @@ export function VideoCall({
             onClick={() => setShowWhiteboard(!showWhiteboard)}
             variant="outline"
             size="sm"
-            className="border-gray-600 text-gray-300 hover:bg-gray-700"
+            className="border-gray-600 text-gray-800 hover:bg-gray-700"
           >
             <PenTool className="h-4 w-4" />
           </Button>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="border-gray-600 text-gray-300 hover:bg-gray-700">
+              <Button variant="outline" size="sm" className="border-gray-600 text-gray-800 hover:bg-gray-700">
                 <MoreVertical className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="bg-gray-800 border-gray-700 text-white">
+            <DropdownMenuContent className="bg-[#121949] border-gray-700 text-white">
               <DropdownMenuItem onClick={() => setShowSettings(true)}>
                 <Settings className="h-4 w-4 mr-2" />
                 Settings
@@ -467,7 +530,7 @@ export function VideoCall({
       </div>
 
       {/* Controls */}
-      <div className="p-4 bg-gray-800 border-t border-gray-700">
+      <div className="p-4 bg-[#354db0] border-t border-gray-700">
         <div className="flex items-center justify-center gap-4">
           <Button
             onClick={toggleAudio}
@@ -490,14 +553,14 @@ export function VideoCall({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
-                variant={isScreenSharing ? "secondary" : "outline"}
+                // variant={isScreenSharing ? "secondary" : "outline"}
                 size="lg"
                 className={`rounded-full w-12 h-12 ${isScreenSharing ? "bg-blue-600 hover:bg-blue-700" : ""}`}
               >
                 <Monitor className="h-5 w-5" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="bg-gray-800 border-gray-700 text-white w-64">
+            <DropdownMenuContent className="bg-[#121949] border-gray-700 text-white w-64">
               <DropdownMenuLabel>Screen Share Options</DropdownMenuLabel>
               <DropdownMenuSeparator className="bg-gray-700" />
 
@@ -556,7 +619,7 @@ export function VideoCall({
 
           <Button
             onClick={() => setShowReactions(!showReactions)}
-            variant="outline"
+            // variant="outline"
             size="lg"
             className="rounded-full w-12 h-12"
           >
@@ -565,7 +628,7 @@ export function VideoCall({
 
           <Button
             onClick={isRecording ? stopRecording : startRecording}
-            variant={isRecording ? "destructive" : "outline"}
+            // variant={isRecording ? "destructive" : "outline"}
             size="lg"
             className="rounded-full w-12 h-12"
           >

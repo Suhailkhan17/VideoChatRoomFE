@@ -81,13 +81,13 @@ export function AdvancedScreenShare({
 
   return (
     <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-50">
-      <Card className="w-[500px] max-h-[80vh] overflow-y-auto bg-gray-800 border-gray-700 text-white">
+      <Card className="w-[500px] max-h-[80vh] overflow-y-auto bg-[#121949] border-gray-700 text-white">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-lg flex items-center gap-2">
             <Monitor className="h-5 w-5 text-blue-400" />
             Screen Share Options
           </CardTitle>
-          <Button onClick={onClose} variant="ghost" size="sm" className="text-gray-400 hover:text-white">
+          <Button onClick={onClose} variant="ghost" size="sm" className="text-gray-400 hover:text-black">
             <X className="h-4 w-4" />
           </Button>
         </CardHeader>
@@ -124,10 +124,10 @@ export function AdvancedScreenShare({
                     key={shareType.type}
                     onClick={() => onSelectType(shareType.type, shareOptions)}
                     variant="outline"
-                    className="h-auto p-4 border-gray-600 text-left hover:bg-gray-700 relative"
+                    className="h-auto p-4 border-gray-600 text-left hover:bg-[#354db0] relative"
                     disabled={isScreenSharing}
                   >
-                    <div className="flex items-center gap-4 w-full">
+                    <div className="flex items-center gap-4 w-full text-black hover:text-white">
                       <div className={`w-12 h-12 ${shareType.color} rounded-lg flex items-center justify-center`}>
                         <Icon className="h-6 w-6 text-white" />
                       </div>
@@ -155,7 +155,7 @@ export function AdvancedScreenShare({
               <Volume2 className="h-4 w-4" />
               Audio Settings
             </h3>
-            <div className="flex items-center justify-between p-3 bg-gray-700 rounded-lg">
+            <div className="flex items-center justify-between p-3 bg-[#354db0] rounded-lg">
               <div className="flex items-center gap-2">
                 {includeAudio ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
                 <Label htmlFor="include-audio">Include system audio</Label>
@@ -176,14 +176,14 @@ export function AdvancedScreenShare({
               Video Quality
             </h3>
 
-            <div className="space-y-3 p-3 bg-gray-700 rounded-lg">
+            <div className="space-y-3 p-3 bg-[#354db0] rounded-lg">
               <div className="space-y-2">
                 <Label>Quality Preset</Label>
                 <Select value={quality} onValueChange={(value: any) => setQuality(value)} disabled={isScreenSharing}>
                   <SelectTrigger className="bg-gray-600 border-gray-500">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-gray-600 border-gray-500">
+                  <SelectContent className="bg-gray-600 border-gray-500 text-white">
                     <SelectItem value="low">
                       Low - {qualitySettings.low.resolution} ({qualitySettings.low.bitrate})
                     </SelectItem>
@@ -222,14 +222,14 @@ export function AdvancedScreenShare({
               Advanced Options
             </h3>
 
-            <div className="space-y-3 p-3 bg-gray-700 rounded-lg">
+            <div className="space-y-3 p-3 bg-[#354db0] rounded-lg">
               <div className="space-y-2">
                 <Label>Mouse Cursor</Label>
                 <Select value={cursor} onValueChange={(value: any) => setCursor(value)} disabled={isScreenSharing}>
                   <SelectTrigger className="bg-gray-600 border-gray-500">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-gray-600 border-gray-500">
+                  <SelectContent className="bg-gray-600 border-gray-500 text-white">
                     <SelectItem value="always">Always show cursor</SelectItem>
                     <SelectItem value="motion">Show on motion</SelectItem>
                     <SelectItem value="never">Never show cursor</SelectItem>
@@ -247,7 +247,7 @@ export function AdvancedScreenShare({
                   <SelectTrigger className="bg-gray-600 border-gray-500">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-gray-600 border-gray-500">
+                  <SelectContent className="bg-gray-600 border-gray-500 text-white">
                     <SelectItem value="auto">Auto (Recommended)</SelectItem>
                     <SelectItem value="text">Optimize for text</SelectItem>
                     <SelectItem value="motion">Optimize for motion</SelectItem>
@@ -259,14 +259,14 @@ export function AdvancedScreenShare({
           </div>
 
           {/* Performance Info */}
-          <div className="p-3 bg-gray-700 rounded-lg">
+          <div className="p-3 bg-[#354db0] rounded-lg">
             <div className="flex items-center gap-2 mb-2">
               <Zap className="h-4 w-4 text-yellow-500" />
               <span className="text-sm font-medium">Performance Impact</span>
             </div>
             <div className="grid grid-cols-3 gap-2 text-xs">
               <div className="text-center">
-                <div className="text-gray-400">CPU Usage</div>
+                <div className="text-white">CPU Usage</div>
                 <div
                   className={`font-medium ${quality === "ultra" ? "text-red-400" : quality === "high" ? "text-yellow-400" : "text-green-400"}`}
                 >
@@ -274,11 +274,11 @@ export function AdvancedScreenShare({
                 </div>
               </div>
               <div className="text-center">
-                <div className="text-gray-400">Bandwidth</div>
+                <div className="text-white">Bandwidth</div>
                 <div className="font-medium text-blue-400">{qualitySettings[quality].bitrate}</div>
               </div>
               <div className="text-center">
-                <div className="text-gray-400">Quality</div>
+                <div className="text-white">Quality</div>
                 <div className="font-medium text-green-400">{qualitySettings[quality].resolution}</div>
               </div>
             </div>
