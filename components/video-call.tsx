@@ -272,40 +272,201 @@ export function VideoCall({
     }
   }
 
-  const startRecording = () => {
+  // Fixed recording functions for video-call.tsx
+
+// Fixed recording functions for video-call.tsx
+
+const startRecording = useCallback(async () => {
+  try {
+    // 1. Check if MediaRecorder is supported
+    if (!MediaRecorder.isTypeSupported) {
+      throw new Error('MediaRecorder is not supported in this browser');
+    }
+
+    // 2. Create a composite stream that includes all audio/video sources
+    let recordingStream: MediaStream;
+    
     if (localStream) {
-      recordedChunks.current = []
-      mediaRecorder.current = new MediaRecorder(localStream, {
-        mimeType: "video/webm;codecs=vp9",
-      })
+      // Clone the local stream to avoid affecting the original
+      recordingStream = localStream.clone();
+    } else {
+      throw new Error('No local stream available for recording');
+    }
 
-      mediaRecorder.current.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          recordedChunks.current.push(event.data)
+    // 3. Determine the best supported MIME type
+    const mimeTypes = [
+      'video/webm;codecs=vp9,opus',
+      'video/webm;codecs=vp8,opus', 
+      'video/webm;codecs=h264,opus',
+      'video/webm',
+      'video/mp4;codecs=h264,aac',
+      'video/mp4'
+    ];
+
+    let selectedMimeType = '';
+    for (const mimeType of mimeTypes) {
+      if (MediaRecorder.isTypeSupported(mimeType)) {
+        selectedMimeType = mimeType;
+        break;
+      }
+    }
+
+    if (!selectedMimeType) {
+      throw new Error('No supported video format found');
+    }
+
+    console.log('Using MIME type:', selectedMimeType);
+
+    // 4. Initialize MediaRecorder with proper options
+    recordedChunks.current = [];
+    
+    const mediaRecorderOptions: MediaRecorderOptions = {
+      mimeType: selectedMimeType,
+      videoBitsPerSecond: 2500000, // 2.5 Mbps
+      audioBitsPerSecond: 128000,  // 128 kbps
+    };
+
+    mediaRecorder.current = new MediaRecorder(recordingStream, mediaRecorderOptions);
+
+    // 5. Set up event handlers
+    mediaRecorder.current.ondataavailable = (event) => {
+      console.log('Data available:', event.data.size, 'bytes');
+      if (event.data && event.data.size > 0) {
+        recordedChunks.current.push(event.data);
+      }
+    };
+
+    mediaRecorder.current.onstop = () => {
+      console.log('Recording stopped, processing', recordedChunks.current.length, 'chunks');
+      
+      if (recordedChunks.current.length === 0) {
+        console.error('No recorded data available');
+        alert('Recording failed: No data was recorded');
+        return;
+      }
+
+      try {
+        // Create blob with the same MIME type used for recording
+        const blob = new Blob(recordedChunks.current, { 
+          type: selectedMimeType 
+        });
+        
+        console.log('Created blob:', blob.size, 'bytes');
+        
+        if (blob.size === 0) {
+          throw new Error('Recorded blob is empty');
         }
-      }
 
-      mediaRecorder.current.onstop = () => {
-        const blob = new Blob(recordedChunks.current, { type: "video/webm" })
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement("a")
-        a.href = url
-        a.download = `video-call-${roomId}-${new Date().toISOString()}.webm`
-        a.click()
-        URL.revokeObjectURL(url)
-      }
+        // Generate filename with timestamp
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const extension = selectedMimeType.includes('mp4') ? 'mp4' : 'webm';
+        const filename = `video-call-${roomId}-${timestamp}.${extension}`;
 
-      mediaRecorder.current.start()
-      setIsRecording(true)
-    }
+        // Create download link
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.style.display = 'none';
+        
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        
+        // Clean up
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        
+        console.log('Recording downloaded successfully:', filename);
+        
+      } catch (error) {
+        console.error('Error processing recording:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        alert('Failed to save recording: ' + errorMessage);
+      }
+    };
+
+    mediaRecorder.current.onerror = (event) => {
+      console.error('MediaRecorder error:', event);
+      alert('Recording error occurred');
+      setIsRecording(false);
+    };
+
+    mediaRecorder.current.onstart = () => {
+      console.log('Recording started successfully');
+    };
+
+    // 6. Start recording with time slice for better data handling
+    mediaRecorder.current.start(1000); // Record in 1-second chunks
+    setIsRecording(true);
+    
+    console.log('Recording started with MIME type:', selectedMimeType);
+
+  } catch (error) {
+    console.error('Error starting recording:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    alert('Failed to start recording: ' + errorMessage);
+    setIsRecording(false);
   }
+}, [localStream, roomId]);
 
-  const stopRecording = () => {
+const stopRecording = useCallback(() => {
+  try {
     if (mediaRecorder.current && isRecording) {
-      mediaRecorder.current.stop()
-      setIsRecording(false)
+      console.log('Stopping recording...');
+      
+      if (mediaRecorder.current.state === 'recording') {
+        mediaRecorder.current.stop();
+      }
+      
+      setIsRecording(false);
+      console.log('Recording stop requested');
+    } else {
+      console.warn('No active recording to stop');
     }
+  } catch (error) {
+    console.error('Error stopping recording:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    alert('Error stopping recording: ' + errorMessage);
+    setIsRecording(false);
   }
+}, [isRecording]);
+
+// Additional utility function to check recording capabilities
+const checkRecordingCapabilities = useCallback(() => {
+  const capabilities = {
+    mediaRecorderSupported: typeof MediaRecorder !== 'undefined',
+    supportedMimeTypes: [] as string[],
+    browserInfo: navigator.userAgent,
+    isSecureContext: window.isSecureContext
+  };
+
+  const mimeTypes = [
+    'video/webm;codecs=vp9,opus',
+    'video/webm;codecs=vp8,opus', 
+    'video/webm;codecs=h264,opus',
+    'video/webm',
+    'video/mp4;codecs=h264,aac',
+    'video/mp4'
+  ];
+
+  if (MediaRecorder.isTypeSupported) {
+    capabilities.supportedMimeTypes = mimeTypes.filter(type => 
+      MediaRecorder.isTypeSupported(type)
+    );
+  }
+
+  console.log('Recording capabilities:', capabilities);
+  return capabilities;
+}, []);
+
+// Enhanced recording panel props
+const enhancedRecordingProps = {
+  isRecording,
+  onStartRecording: startRecording,
+  onStopRecording: stopRecording,
+  onClose: () => setShowRecording(false),
+  capabilities: checkRecordingCapabilities()
+};
 
   const togglePictureInPicture = async () => {
     if (localVideoRef.current) {
